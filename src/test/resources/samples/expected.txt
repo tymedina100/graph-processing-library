@@ -1,0 +1,8 @@
+nodes=4
+labels=A,B,C,E
+edges=5
+A -> B
+A -> C
+B -> C
+C -> E
+E -> A
