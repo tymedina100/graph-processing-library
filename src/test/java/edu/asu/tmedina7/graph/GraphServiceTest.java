@@ -28,4 +28,14 @@ public class GraphServiceTest {
         assertEquals(2, gs.addNodes(new String[]{"A","B","A",null,""}));
     }
 
+    @Test
+    void feature3_add_edges_dedupe() {
+        GraphService gs = new GraphService();
+        gs.addNode("A"); gs.addNode("B");
+        assertTrue(gs.addEdge("A","B"));   // first time
+        assertFalse(gs.addEdge("A","B"));  // duplicate
+        assertTrue(gs.addEdge("B","A"));   // new, opposite direction
+        assertTrue(gs.addEdge("X","Y"));   // auto-add missing vertices
+    }
+
 }

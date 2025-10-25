@@ -62,6 +62,14 @@ public class GraphService {
         return added;
     }
 
+    public boolean addEdge(String src, String dst) {
+        Objects.requireNonNull(src); Objects.requireNonNull(dst);
+        if (src.isEmpty() || dst.isEmpty()) return false;
+        if (!g.containsVertex(src)) g.addVertex(src);
+        if (!g.containsVertex(dst)) g.addVertex(dst);
+        if (g.containsEdge(src, dst)) return false;
+        return g.addEdge(src, dst) != null;
+    }
 }
 
 
