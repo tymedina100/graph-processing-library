@@ -11,6 +11,10 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.jgrapht.nio.dot.DOTExporter;
+import java.io.Writer;
+import java.util.concurrent.TimeUnit;
+
 public class GraphService {
     private final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
 
@@ -69,6 +73,51 @@ public class GraphService {
         if (!g.containsVertex(dst)) g.addVertex(dst);
         if (g.containsEdge(src, dst)) return false;
         return g.addEdge(src, dst) != null;
+    }
+
+    public void outputDOTGraph(String path) {
+        DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
+        try (Writer w = Files.newBufferedWriter(Path.of(path))) {
+            exporter.exportGraph(g, w);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to write DOT: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Render a graphic using Graphviz `dot`.
+     * @param outPath output file path (e.g., "target/graph.png")
+     * @param format  e.g., "png", "svg", "jpg"
+     */
+    public void outputGraphics(String outPath, String format) {
+        Objects.requireNonNull(outPath, "outPath");
+        Objects.requireNonNull(format, "format");
+        if (format.isBlank()) throw new IllegalArgumentException("format must not be blank");
+
+        try {
+            // 1) write a temp DOT file
+            Path dotPath = Files.createTempFile("graph_", ".dot");
+            outputDOTGraph(dotPath.toString());
+
+            // 2) dot -T{format} dotPath -o outPath
+            Process p = new ProcessBuilder("dot", "-T" + format, dotPath.toString(), "-o", outPath)
+                    .redirectErrorStream(true)
+                    .start();
+
+            // 3) wait with a timeout and capture output if it fails
+            boolean ok = p.waitFor(20, TimeUnit.SECONDS);
+            if (!ok) {
+                p.destroyForcibly();
+                throw new RuntimeException("dot timed out");
+            }
+            int code = p.exitValue();
+            if (code != 0) {
+                String err = new String(p.getInputStream().readAllBytes()); // merged stdout/stderr
+                throw new RuntimeException("dot exit " + code + ": " + err);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to render graphics: " + e.getMessage(), e);
+        }
     }
 }
 

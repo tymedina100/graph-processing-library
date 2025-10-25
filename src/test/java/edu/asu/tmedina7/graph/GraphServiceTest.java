@@ -38,4 +38,19 @@ public class GraphServiceTest {
         assertTrue(gs.addEdge("X","Y"));   // auto-add missing vertices
     }
 
+    @Test
+    void feature4_dot_and_png() throws Exception {
+        GraphService gs = new GraphService();
+        gs.parseGraph("src/main/resources/samples/input.dot");
+
+        Path dotOut = Path.of("target", "test-graph.dot");
+        gs.outputDOTGraph(dotOut.toString());
+        assertTrue(Files.exists(dotOut));
+        assertTrue(Files.size(dotOut) > 0);
+
+        Path pngOut = Path.of("target", "test-graph.png");
+        gs.outputGraphics(pngOut.toString(), "png");
+        assertTrue(Files.exists(pngOut));
+        assertTrue(Files.size(pngOut) > 0);
+    }
 }
