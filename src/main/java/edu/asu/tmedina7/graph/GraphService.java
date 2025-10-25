@@ -48,6 +48,20 @@ public class GraphService {
             throw new RuntimeException("Failed to write graph text: " + e.getMessage(), e);
         }
     }
+
+    public boolean addNode(String label) {
+        Objects.requireNonNull(label, "label");
+        if (label.isEmpty()) return false;
+        if (g.containsVertex(label)) return false;
+        return g.addVertex(label);
+    }
+    public int addNodes(String[] labels) {
+        if (labels == null) return 0;
+        int added = 0;
+        for (String l : labels) if (l != null && addNode(l)) added++;
+        return added;
+    }
+
 }
 
 

@@ -19,4 +19,13 @@ public class GraphServiceTest {
         assertTrue(Files.exists(out));
         assertTrue(Files.size(out) > 0);
     }
+
+    @Test
+    void feature2_add_nodes() {
+        GraphService gs = new GraphService();
+        assertTrue(gs.addNode("X"));
+        assertFalse(gs.addNode("X"));
+        assertEquals(2, gs.addNodes(new String[]{"A","B","A",null,""}));
+    }
+
 }
