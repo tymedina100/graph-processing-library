@@ -75,6 +75,36 @@ public class GraphService {
         return g.addEdge(src, dst) != null;
     }
 
+    // === Removals (Part 2) ===
+
+    /** Remove a single node (and any incident edges). Returns true if it existed. */
+    public boolean removeNode(String label) {
+        Objects.requireNonNull(label, "label");
+        if (label.isEmpty()) return false;
+        return g.removeVertex(label);
+    }
+
+    /** Remove multiple nodes; returns how many were actually removed. */
+    public int removeNodes(String[] labels) {
+        if (labels == null) return 0;
+        int removed = 0;
+        for (String l : labels) {
+            if (l != null && !l.isEmpty() && g.removeVertex(l)) removed++;
+        }
+        return removed;
+    }
+
+    /** Remove exactly one edge src->dst. Returns true if the edge existed and was removed. */
+    public boolean removeEdge(String src, String dst) {
+        Objects.requireNonNull(src, "src");
+        Objects.requireNonNull(dst, "dst");
+        if (src.isEmpty() || dst.isEmpty()) return false;
+        if (!g.containsVertex(src) || !g.containsVertex(dst)) return false;
+        if (!g.containsEdge(src, dst)) return false;
+        g.removeEdge(src, dst);
+        return true;
+    }
+
     public void outputDOTGraph(String path) {
         DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
         try (Writer w = Files.newBufferedWriter(Path.of(path))) {
