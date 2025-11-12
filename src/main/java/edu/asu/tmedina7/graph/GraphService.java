@@ -113,6 +113,14 @@ public class GraphService {
         throw new UnsupportedOperationException("TODO: BFS implementation");
     }
 
+    /**
+     * Part 2 (DFS branch): return a path from src to dst if one exists, else empty.
+     * NOTE: DFS implementation will be added later; placeholder for now.
+     */
+    public java.util.Optional<Path> graphSearchDfs(String src, String dst) {
+        throw new UnsupportedOperationException("TODO: DFS implementation");
+    }
+
     public void outputDOTGraph(String path) {
         DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
         try (Writer w = Files.newBufferedWriter(Path.of(path))) {
