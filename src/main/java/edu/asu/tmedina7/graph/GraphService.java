@@ -105,6 +105,14 @@ public class GraphService {
         return true;
     }
 
+    /**
+     * Part 2 (BFS branch): return a path from src to dst if one exists, else empty.
+     * NOTE: BFS implementation will be added later; placeholder for now.
+     */
+    public java.util.Optional<Path> graphSearchBfs(String src, String dst) {
+        throw new UnsupportedOperationException("TODO: BFS implementation");
+    }
+
     public void outputDOTGraph(String path) {
         DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
         try (Writer w = Files.newBufferedWriter(Path.of(path))) {
