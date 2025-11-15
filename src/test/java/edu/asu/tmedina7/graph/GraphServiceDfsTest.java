@@ -18,7 +18,7 @@ class GraphServiceDfsTest {
         service.addEdge("A", "B");
         service.addEdge("B", "C");
 
-        Path path = service.GraphSearch("A", "C");
+        Path path = service.GraphSearch("A", "C", Algorithm.DFS);
 
         assertNotNull(path);
         assertEquals(Arrays.asList("A", "B", "C"), path.getNodes());
@@ -33,7 +33,7 @@ class GraphServiceDfsTest {
         service.addNode("C");
         service.addEdge("A", "B"); // no edge from B to C or C to B
 
-        Path path = service.GraphSearch("A", "C");
+        Path path = service.GraphSearch("A", "C", Algorithm.DFS);
 
         assertNull(path);
     }
@@ -44,7 +44,7 @@ class GraphServiceDfsTest {
 
         service.addNode("A");
 
-        Path path = service.GraphSearch("A", "A");
+        Path path = service.GraphSearch("A", "A", Algorithm.DFS);
 
         assertNotNull(path);
         assertEquals(Arrays.asList("A"), path.getNodes());
@@ -58,7 +58,7 @@ class GraphServiceDfsTest {
         service.addNode("B");
         service.addEdge("A", "B");
 
-        assertNull(service.GraphSearch("A", "C")); // dst missing
-        assertNull(service.GraphSearch("X", "B")); // src missing
+        assertNull(service.GraphSearch("A", "C", Algorithm.DFS)); // dst missing
+        assertNull(service.GraphSearch("X", "B", Algorithm.DFS)); // src missing
     }
 }

@@ -109,7 +109,7 @@ public class GraphService {
      * Finds a path from srcLabel to dstLabel using the specified algorithm.
      * Returns a Path if one exists, or null otherwise.
      */
-    public Path GraphSearch(String srcLabel, String dstLabel, Algorithm algo) {
+    public Path GraphSearch(String srcLabel, String dstLabel, edu.asu.tmedina7.graph.Algorithm algo) {
         Objects.requireNonNull(algo, "algo");
         switch (algo) {
             case BFS:
