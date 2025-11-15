@@ -151,6 +151,58 @@ public class GraphService {
         return null;
     }
 
+    // --- DFS search: depth-first path; returns null if unreachable or nodes missing
+    public Path graphSearch(String src, String dst) {
+        Objects.requireNonNull(src, "src");
+        Objects.requireNonNull(dst, "dst");
+
+        if (!g.containsVertex(src) || !g.containsVertex(dst)) {
+            return null;
+        }
+        if (src.equals(dst)) {
+            return new Path(List.of(src));
+        }
+
+        Set<String> visited = new HashSet<>();
+        Map<String, String> parent = new HashMap<>();
+
+        boolean found = dfsVisit(src, dst, visited, parent);
+        if (!found) {
+            return null;
+        }
+
+        // Reconstruct path from dst back to src
+        LinkedList<String> nodes = new LinkedList<>();
+        String cur = dst;
+        while (cur != null) {
+            nodes.addFirst(cur);
+            cur = parent.get(cur);
+        }
+        return new Path(nodes);
+    }
+
+    private boolean dfsVisit(String current,
+                             String dst,
+                             Set<String> visited,
+                             Map<String, String> parent) {
+
+        visited.add(current);
+        if (current.equals(dst)) {
+            return true;
+        }
+
+        for (DefaultEdge e : g.outgoingEdgesOf(current)) {
+            String neighbor = g.getEdgeTarget(e);
+            if (!visited.contains(neighbor)) {
+                parent.put(neighbor, current);
+                if (dfsVisit(neighbor, dst, visited, parent)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public void outputDOTGraph(String path) {
         DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
         try (Writer w = Files.newBufferedWriter(Paths.get(path))) {
