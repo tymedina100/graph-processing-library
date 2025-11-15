@@ -106,10 +106,24 @@ public class GraphService {
     }
 
     /**
-     * Finds a path from srcLabel to dstLabel using DFS.
+     * Finds a path from srcLabel to dstLabel using the specified algorithm.
      * Returns a Path if one exists, or null otherwise.
      */
-    public Path GraphSearch(String srcLabel, String dstLabel) {
+    public Path GraphSearch(String srcLabel, String dstLabel, Algorithm algo) {
+        Objects.requireNonNull(algo, "algo");
+        switch (algo) {
+            case BFS:
+                return bfsSearch(srcLabel, dstLabel);
+            case DFS:
+                return dfsSearch(srcLabel, dstLabel);
+            default:
+                throw new IllegalArgumentException("Unsupported algorithm: " + algo);
+        }
+    }
+
+    // --- internal helpers for BFS and DFS ---
+
+    private Path bfsSearch(String srcLabel, String dstLabel) {
         // If either node is missing from the graph, no path can exist.
         if (!g.containsVertex(srcLabel) || !g.containsVertex(dstLabel)) {
             return null;
@@ -120,10 +134,60 @@ public class GraphService {
             return new Path(Collections.singletonList(srcLabel));
         }
 
-        // Depth-first search using an explicit stack
-        Deque<String> stack = new ArrayDeque<>();
+        Queue<String> queue = new ArrayDeque<>();
         Set<String> visited = new HashSet<>();
         Map<String, String> parent = new HashMap<>(); // child -> parent
+
+        visited.add(srcLabel);
+        queue.add(srcLabel);
+
+        boolean found = false;
+
+        while (!queue.isEmpty()) {
+            String current = queue.remove();
+
+            if (current.equals(dstLabel)) {
+                found = true;
+                break;
+            }
+
+            for (DefaultEdge edge : g.outgoingEdgesOf(current)) {
+                String neighbor = g.getEdgeTarget(edge);
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    parent.put(neighbor, current);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        if (!found) {
+            return null;
+        }
+
+        List<String> pathNodes = new ArrayList<>();
+        String current = dstLabel;
+        while (current != null) {
+            pathNodes.add(current);
+            current = parent.get(current);
+        }
+
+        Collections.reverse(pathNodes);
+        return new Path(pathNodes);
+    }
+
+    private Path dfsSearch(String srcLabel, String dstLabel) {
+        if (!g.containsVertex(srcLabel) || !g.containsVertex(dstLabel)) {
+            return null;
+        }
+
+        if (srcLabel.equals(dstLabel)) {
+            return new Path(Collections.singletonList(srcLabel));
+        }
+
+        Deque<String> stack = new ArrayDeque<>();
+        Set<String> visited = new HashSet<>();
+        Map<String, String> parent = new HashMap<>();
 
         visited.add(srcLabel);
         stack.push(srcLabel);
@@ -138,7 +202,6 @@ public class GraphService {
                 break;
             }
 
-            // Explore neighbors (outgoing edges)
             for (DefaultEdge edge : g.outgoingEdgesOf(current)) {
                 String neighbor = g.getEdgeTarget(edge);
                 if (!visited.contains(neighbor)) {
@@ -153,16 +216,14 @@ public class GraphService {
             return null;
         }
 
-        // Reconstruct path from dstLabel back to srcLabel using parent map
         List<String> pathNodes = new ArrayList<>();
         String current = dstLabel;
         while (current != null) {
             pathNodes.add(current);
-            current = parent.get(current); // null when we reach srcLabel
+            current = parent.get(current);
         }
 
-        Collections.reverse(pathNodes); // now src -> ... -> dst
-
+        Collections.reverse(pathNodes);
         return new Path(pathNodes);
     }
 
