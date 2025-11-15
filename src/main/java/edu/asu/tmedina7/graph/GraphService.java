@@ -7,7 +7,6 @@ import org.jgrapht.nio.dot.DOTImporter;
 
 import java.io.Reader;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,7 +20,7 @@ public class GraphService {
     public void parseGraph(String filepath) {
         DOTImporter<String, DefaultEdge> importer = new DOTImporter<>();
         importer.setVertexFactory(label -> label); // use label as vertex id
-        try (Reader r = Files.newBufferedReader(Path.of(filepath))) {
+        try (Reader r = Files.newBufferedReader(java.nio.file.Path.of(filepath))) {
             importer.importGraph(g, r);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse DOT: " + e.getMessage(), e);
@@ -47,7 +46,7 @@ public class GraphService {
 
     public void outputGraph(String filepath) {
         try {
-            Files.writeString(Path.of(filepath), this.toString());
+            Files.writeString(java.nio.file.Path.of(filepath), this.toString());
         } catch (Exception e) {
             throw new RuntimeException("Failed to write graph text: " + e.getMessage(), e);
         }
@@ -59,6 +58,7 @@ public class GraphService {
         if (g.containsVertex(label)) return false;
         return g.addVertex(label);
     }
+
     public int addNodes(String[] labels) {
         if (labels == null) return 0;
         int added = 0;
@@ -105,9 +105,72 @@ public class GraphService {
         return true;
     }
 
+    /**
+     * Finds a path from srcLabel to dstLabel using BFS.
+     * Returns a Path if one exists, or null otherwise.
+     */
+    public Path GraphSearch(String srcLabel, String dstLabel) {
+        // If either node is missing from the graph, no path can exist.
+        if (!g.containsVertex(srcLabel) || !g.containsVertex(dstLabel)) {
+            return null;
+        }
+
+        // Special case: src == dst
+        if (srcLabel.equals(dstLabel)) {
+            return new Path(Collections.singletonList(srcLabel));
+        }
+
+        // Standard BFS
+        Queue<String> queue = new ArrayDeque<>();
+        Set<String> visited = new HashSet<>();
+        Map<String, String> parent = new HashMap<>(); // child -> parent
+
+        visited.add(srcLabel);
+        queue.add(srcLabel);
+
+        boolean found = false;
+
+        while (!queue.isEmpty()) {
+            String current = queue.remove();
+
+            // If we reach destination, stop BFS
+            if (current.equals(dstLabel)) {
+                found = true;
+                break;
+            }
+
+            // Explore neighbors (outgoing edges)
+            for (DefaultEdge edge : g.outgoingEdgesOf(current)) {
+                String neighbor = g.getEdgeTarget(edge);
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    parent.put(neighbor, current);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        if (!found) {
+            return null;
+        }
+
+        // Reconstruct path from dstLabel back to srcLabel using parent map
+        List<String> pathNodes = new ArrayList<>();
+        String current = dstLabel;
+        while (current != null) {
+            pathNodes.add(current);
+            current = parent.get(current); // null when we reach srcLabel
+        }
+
+        // Currently reversed: dst -> ... -> src, so reverse it
+        Collections.reverse(pathNodes);
+
+        return new Path(pathNodes);
+    }
+
     public void outputDOTGraph(String path) {
         DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
-        try (Writer w = Files.newBufferedWriter(Path.of(path))) {
+        try (Writer w = Files.newBufferedWriter(java.nio.file.Path.of(path))) {
             exporter.exportGraph(g, w);
         } catch (Exception e) {
             throw new RuntimeException("Failed to write DOT: " + e.getMessage(), e);
@@ -126,7 +189,7 @@ public class GraphService {
 
         try {
             // 1) write a temp DOT file
-            Path dotPath = Files.createTempFile("graph_", ".dot");
+            java.nio.file.Path dotPath = Files.createTempFile("graph_", ".dot");
             outputDOTGraph(dotPath.toString());
 
             // 2) dot -T{format} dotPath -o outPath
@@ -150,5 +213,3 @@ public class GraphService {
         }
     }
 }
-
-
