@@ -15,13 +15,13 @@ import java.io.Writer;
 import java.util.concurrent.TimeUnit;
 
 public class GraphService {
-    private final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
+    private final Graph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
 
-    public void parseGraph(String filepath) {
+    public void parseGraph(String dotFilePath) {
         DOTImporter<String, DefaultEdge> importer = new DOTImporter<>();
         importer.setVertexFactory(label -> label); // use label as vertex id
-        try (Reader r = Files.newBufferedReader(java.nio.file.Path.of(filepath))) {
-            importer.importGraph(g, r);
+        try (Reader reader = Files.newBufferedReader(java.nio.file.Path.of(dotFilePath))) {
+            importer.importGraph(graph, reader);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse DOT: " + e.getMessage(), e);
         }
@@ -29,11 +29,11 @@ public class GraphService {
 
     @Override
     public String toString() {
-        List<String> nodes = new ArrayList<>(g.vertexSet());
+        List<String> nodes = new ArrayList<>(graph.vertexSet());
         Collections.sort(nodes);
 
-        List<String> edges = g.edgeSet().stream()
-                .map(e -> g.getEdgeSource(e) + " -> " + g.getEdgeTarget(e))
+        List<String> edges = graph.edgeSet().stream()
+                .map(edge -> graph.getEdgeSource(edge) + " -> " + graph.getEdgeTarget(edge))
                 .sorted() // lexicographic: src then dst
                 .collect(Collectors.toList());
 
@@ -44,9 +44,9 @@ public class GraphService {
                 String.join(nl, edges) + nl;
     }
 
-    public void outputGraph(String filepath) {
+    public void outputGraph(String outFilePath) {
         try {
-            Files.writeString(java.nio.file.Path.of(filepath), this.toString());
+            Files.writeString(java.nio.file.Path.of(outFilePath), this.toString());
         } catch (Exception e) {
             throw new RuntimeException("Failed to write graph text: " + e.getMessage(), e);
         }
@@ -55,8 +55,8 @@ public class GraphService {
     public boolean addNode(String label) {
         Objects.requireNonNull(label, "label");
         if (label.isEmpty()) return false;
-        if (g.containsVertex(label)) return false;
-        return g.addVertex(label);
+        if (graph.containsVertex(label)) return false;
+        return graph.addVertex(label);
     }
 
     public int addNodes(String[] labels) {
@@ -66,13 +66,13 @@ public class GraphService {
         return added;
     }
 
-    public boolean addEdge(String src, String dst) {
-        Objects.requireNonNull(src); Objects.requireNonNull(dst);
-        if (src.isEmpty() || dst.isEmpty()) return false;
-        if (!g.containsVertex(src)) g.addVertex(src);
-        if (!g.containsVertex(dst)) g.addVertex(dst);
-        if (g.containsEdge(src, dst)) return false;
-        return g.addEdge(src, dst) != null;
+    public boolean addEdge(String srclabel, String dstLabel) {
+        Objects.requireNonNull(srclabel); Objects.requireNonNull(dstLabel);
+        if (srclabel.isEmpty() || dstLabel.isEmpty()) return false;
+        if (!graph.containsVertex(srclabel)) graph.addVertex(srclabel);
+        if (!graph.containsVertex(dstLabel)) graph.addVertex(dstLabel);
+        if (graph.containsEdge(srclabel, dstLabel)) return false;
+        return graph.addEdge(srclabel, dstLabel) != null;
     }
 
     // === Removals (Part 2) ===
@@ -81,7 +81,7 @@ public class GraphService {
     public boolean removeNode(String label) {
         Objects.requireNonNull(label, "label");
         if (label.isEmpty()) return false;
-        return g.removeVertex(label);
+        return graph.removeVertex(label);
     }
 
     /** Remove multiple nodes; returns how many were actually removed. */
@@ -89,19 +89,19 @@ public class GraphService {
         if (labels == null) return 0;
         int removed = 0;
         for (String l : labels) {
-            if (l != null && !l.isEmpty() && g.removeVertex(l)) removed++;
+            if (l != null && !l.isEmpty() && graph.removeVertex(l)) removed++;
         }
         return removed;
     }
 
     /** Remove exactly one edge src->dst. Returns true if the edge existed and was removed. */
-    public boolean removeEdge(String src, String dst) {
-        Objects.requireNonNull(src, "src");
-        Objects.requireNonNull(dst, "dst");
-        if (src.isEmpty() || dst.isEmpty()) return false;
-        if (!g.containsVertex(src) || !g.containsVertex(dst)) return false;
-        if (!g.containsEdge(src, dst)) return false;
-        g.removeEdge(src, dst);
+    public boolean removeEdge(String srcLabel, String dstLabel) {
+        Objects.requireNonNull(srcLabel, "src");
+        Objects.requireNonNull(dstLabel, "dst");
+        if (srcLabel.isEmpty() || dstLabel.isEmpty()) return false;
+        if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) return false;
+        if (!graph.containsEdge(srcLabel, dstLabel)) return false;
+        graph.removeEdge(srcLabel, dstLabel);
         return true;
     }
 
@@ -125,7 +125,7 @@ public class GraphService {
 
     private Path bfsSearch(String srcLabel, String dstLabel) {
         // If either node is missing from the graph, no path can exist.
-        if (!g.containsVertex(srcLabel) || !g.containsVertex(dstLabel)) {
+        if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) {
             return null;
         }
 
@@ -141,18 +141,18 @@ public class GraphService {
         visited.add(srcLabel);
         queue.add(srcLabel);
 
-        boolean found = false;
+        boolean pathFound = false;
 
         while (!queue.isEmpty()) {
             String current = queue.remove();
 
             if (current.equals(dstLabel)) {
-                found = true;
+                pathFound = true;
                 break;
             }
 
-            for (DefaultEdge edge : g.outgoingEdgesOf(current)) {
-                String neighbor = g.getEdgeTarget(edge);
+            for (DefaultEdge edge : graph.outgoingEdgesOf(current)) {
+                String neighbor = graph.getEdgeTarget(edge);
                 if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
                     parent.put(neighbor, current);
@@ -161,7 +161,7 @@ public class GraphService {
             }
         }
 
-        if (!found) {
+        if (!pathFound) {
             return null;
         }
 
@@ -177,7 +177,7 @@ public class GraphService {
     }
 
     private Path dfsSearch(String srcLabel, String dstLabel) {
-        if (!g.containsVertex(srcLabel) || !g.containsVertex(dstLabel)) {
+        if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) {
             return null;
         }
 
@@ -202,8 +202,8 @@ public class GraphService {
                 break;
             }
 
-            for (DefaultEdge edge : g.outgoingEdgesOf(current)) {
-                String neighbor = g.getEdgeTarget(edge);
+            for (DefaultEdge edge : graph.outgoingEdgesOf(current)) {
+                String neighbor = graph.getEdgeTarget(edge);
                 if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
                     parent.put(neighbor, current);
@@ -227,10 +227,10 @@ public class GraphService {
         return new Path(pathNodes);
     }
 
-    public void outputDOTGraph(String path) {
+    public void outputDOTGraph(String dotOutPath) {
         DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
-        try (Writer w = Files.newBufferedWriter(java.nio.file.Path.of(path))) {
-            exporter.exportGraph(g, w);
+        try (Writer w = Files.newBufferedWriter(java.nio.file.Path.of(dotOutPath))) {
+            exporter.exportGraph(graph, w);
         } catch (Exception e) {
             throw new RuntimeException("Failed to write DOT: " + e.getMessage(), e);
         }
@@ -257,15 +257,15 @@ public class GraphService {
                     .start();
 
             // 3) wait with a timeout and capture output if it fails
-            boolean ok = p.waitFor(20, TimeUnit.SECONDS);
-            if (!ok) {
+            boolean finished = p.waitFor(20, TimeUnit.SECONDS);
+            if (!finished) {
                 p.destroyForcibly();
                 throw new RuntimeException("dot timed out");
             }
-            int code = p.exitValue();
-            if (code != 0) {
-                String err = new String(p.getInputStream().readAllBytes()); // merged stdout/stderr
-                throw new RuntimeException("dot exit " + code + ": " + err);
+            int exitCode = p.exitValue();
+            if (exitCode != 0) {
+                String output = new String(p.getInputStream().readAllBytes()); // merged stdout/stderr
+                throw new RuntimeException("dot exit " + exitCode + ": " + output);
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to render graphics: " + e.getMessage(), e);
