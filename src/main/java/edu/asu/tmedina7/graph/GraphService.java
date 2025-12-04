@@ -15,6 +15,18 @@ import java.io.Writer;
 import java.util.concurrent.TimeUnit;
 
 public class GraphService {
+    private static final String FAILED_TO_WRITE_GRAPH_TEXT = "Failed to write graph text: ";
+    private static final String EDGE_ARROW = " -> ";
+    private static final String FAILED_TO_PARSE_DOT = "Failed to parse DOT: ";
+    private static final String FAILED_TO_WRITE_DOT = "Failed to write DOT: ";
+    private static final String FAILED_TO_RENDER_GRAPHICS = "Failed to render graphics: ";
+    private static final String DOT_TIMED_OUT = "dot timed out";
+    private static final int DOT_TIMEOUT_SECONDS = 20;
+    private static final String DOT_CMD = "dot";
+    private static final String DOT_PREFIX = "graph_";
+    private static final String DOT_SUFFIX = ".dot";
+    private static final String ERR_FORMAT_BLANK = "format must not be blank";
+    private static final String DOT_EXIT_PREFIX = "dot exit ";
     private final Graph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
 
     public void parseGraph(String dotFilePath) {
@@ -23,7 +35,7 @@ public class GraphService {
         try (Reader reader = Files.newBufferedReader(java.nio.file.Path.of(dotFilePath))) {
             importer.importGraph(graph, reader);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse DOT: " + e.getMessage(), e);
+            throw new RuntimeException(FAILED_TO_PARSE_DOT + e.getMessage(), e);
         }
     }
 
@@ -33,7 +45,7 @@ public class GraphService {
         Collections.sort(nodes);
 
         List<String> edges = graph.edgeSet().stream()
-                .map(edge -> graph.getEdgeSource(edge) + " -> " + graph.getEdgeTarget(edge))
+                .map(edge -> graph.getEdgeSource(edge) + EDGE_ARROW + graph.getEdgeTarget(edge))
                 .sorted() // lexicographic: src then dst
                 .collect(Collectors.toList());
 
@@ -48,7 +60,7 @@ public class GraphService {
         try {
             Files.writeString(java.nio.file.Path.of(outFilePath), this.toString());
         } catch (Exception e) {
-            throw new RuntimeException("Failed to write graph text: " + e.getMessage(), e);
+            throw new RuntimeException(FAILED_TO_WRITE_GRAPH_TEXT + e.getMessage(), e);
         }
     }
 
@@ -231,7 +243,7 @@ public class GraphService {
         try (Writer w = Files.newBufferedWriter(java.nio.file.Path.of(dotOutPath))) {
             exporter.exportGraph(graph, w);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to write DOT: " + e.getMessage(), e);
+            throw new RuntimeException(FAILED_TO_WRITE_DOT + e.getMessage(), e);
         }
     }
 
@@ -243,31 +255,31 @@ public class GraphService {
     public void outputGraphics(String outPath, String format) {
         Objects.requireNonNull(outPath, "outPath");
         Objects.requireNonNull(format, "format");
-        if (format.isBlank()) throw new IllegalArgumentException("format must not be blank");
+        if (format.isBlank()) throw new IllegalArgumentException(ERR_FORMAT_BLANK);
 
         try {
             // 1) write a temp DOT file
-            java.nio.file.Path dotPath = Files.createTempFile("graph_", ".dot");
+            java.nio.file.Path dotPath = Files.createTempFile(DOT_PREFIX, DOT_SUFFIX);
             outputDOTGraph(dotPath.toString());
 
             // 2) dot -T{format} dotPath -o outPath
-            Process p = new ProcessBuilder("dot", "-T" + format, dotPath.toString(), "-o", outPath)
+            Process p = new ProcessBuilder(DOT_CMD, "-T" + format, dotPath.toString(), "-o", outPath)
                     .redirectErrorStream(true)
                     .start();
 
             // 3) wait with a timeout and capture output if it fails
-            boolean finished = p.waitFor(20, TimeUnit.SECONDS);
+            boolean finished = p.waitFor(DOT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             if (!finished) {
                 p.destroyForcibly();
-                throw new RuntimeException("dot timed out");
+                throw new RuntimeException(DOT_TIMED_OUT);
             }
             int exitCode = p.exitValue();
             if (exitCode != 0) {
                 String output = new String(p.getInputStream().readAllBytes()); // merged stdout/stderr
-                throw new RuntimeException("dot exit " + exitCode + ": " + output);
+                throw new RuntimeException(DOT_EXIT_PREFIX + exitCode + ": " + output);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to render graphics: " + e.getMessage(), e);
+            throw new RuntimeException(FAILED_TO_RENDER_GRAPHICS + e.getMessage(), e);
         }
     }
 }
