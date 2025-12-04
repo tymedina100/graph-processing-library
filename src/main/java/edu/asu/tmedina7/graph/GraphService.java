@@ -125,9 +125,7 @@ public class GraphService {
 
     private Path bfsSearch(String srcLabel, String dstLabel) {
         // If either node is missing from the graph, no path can exist.
-        if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) {
-            return null;
-        }
+        if (canSearch(srcLabel, dstLabel)) return null;
 
         // Special case: src == dst
         if (srcLabel.equals(dstLabel)) {
@@ -165,6 +163,10 @@ public class GraphService {
             return null;
         }
 
+        return buildPathFromParents(dstLabel, parent);
+    }
+
+    private static Path buildPathFromParents(String dstLabel, Map<String, String> parent) {
         List<String> pathNodes = new ArrayList<>();
         String current = dstLabel;
         while (current != null) {
@@ -176,10 +178,15 @@ public class GraphService {
         return new Path(pathNodes);
     }
 
-    private Path dfsSearch(String srcLabel, String dstLabel) {
+    private boolean canSearch(String srcLabel, String dstLabel) {
         if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) {
-            return null;
+            return true;
         }
+        return false;
+    }
+
+    private Path dfsSearch(String srcLabel, String dstLabel) {
+        if (canSearch(srcLabel, dstLabel)) return null;
 
         if (srcLabel.equals(dstLabel)) {
             return new Path(Collections.singletonList(srcLabel));
@@ -216,15 +223,7 @@ public class GraphService {
             return null;
         }
 
-        List<String> pathNodes = new ArrayList<>();
-        String current = dstLabel;
-        while (current != null) {
-            pathNodes.add(current);
-            current = parent.get(current);
-        }
-
-        Collections.reverse(pathNodes);
-        return new Path(pathNodes);
+        return buildPathFromParents(dstLabel, parent);
     }
 
     public void outputDOTGraph(String dotOutPath) {
