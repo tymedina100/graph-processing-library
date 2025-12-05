@@ -25,4 +25,9 @@ final class BfsSearch extends GraphSearchTemplate {
     protected String popFromFrontier(Deque<String> frontier) {
         return frontier.removeFirst(); // queue dequeue
     }
+
+    @Override
+    protected void onVisit(Path currentPath) {
+        System.out.println("visiting " + PathFormat.schemeA(currentPath));
+    }
 }

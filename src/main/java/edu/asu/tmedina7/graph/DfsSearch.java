@@ -25,4 +25,9 @@ final class DfsSearch extends GraphSearchTemplate {
     protected String popFromFrontier(Deque<String> frontier) {
         return frontier.pop(); // stack pop
     }
+
+    @Override
+    protected void onVisit(Path currentPath) {
+        System.out.println("visiting " + PathFormat.schemeA(currentPath));
+    }
 }

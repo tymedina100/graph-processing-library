@@ -35,7 +35,7 @@ final class RandomWalkSearch extends GraphSearchTemplate {
     }
 
     @Override
-    protected void onVisit(Path path) {
-        System.out.println("visiting " + path);
+    protected void onVisit(Path currentPath) {
+        System.out.println("visiting " + PathFormat.schemeA(currentPath));
     }
 }
