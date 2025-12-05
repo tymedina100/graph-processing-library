@@ -117,110 +117,19 @@ public class GraphService {
         }
     }
 
-    // --- internal helpers for BFS and DFS ---
+    // --- internal helpers for BFS and DFS (Template Method pattern) ---
+
+    private final GraphSearchTemplate bfsSearcher = new BfsSearch(g());
+    private final GraphSearchTemplate dfsSearcher = new DfsSearch(g());
 
     private Path bfsSearch(String srcLabel, String dstLabel) {
-        // If either node is missing from the graph, no path can exist.
-        if (!canSearch(srcLabel, dstLabel)) return null;
-
-        // Special case: src == dst
-        if (srcLabel.equals(dstLabel)) {
-            return new Path(Collections.singletonList(srcLabel));
-        }
-
-        Queue<String> queue = new ArrayDeque<>();
-        Set<String> visited = new HashSet<>();
-        Map<String, String> parent = new HashMap<>(); // child -> parent
-
-        visited.add(srcLabel);
-        queue.add(srcLabel);
-
-        boolean pathFound = false;
-
-        while (!queue.isEmpty()) {
-            String current = queue.remove();
-
-            if (current.equals(dstLabel)) {
-                pathFound = true;
-                break;
-            }
-
-            for (DefaultEdge edge : g().outgoingEdgesOf(current)) {
-                String neighbor = g().getEdgeTarget(edge);
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    parent.put(neighbor, current);
-                    queue.add(neighbor);
-                }
-            }
-        }
-
-        if (!pathFound) {
-            return null;
-        }
-
-        return buildPathFromParents(dstLabel, parent);
-    }
-
-    private static Path buildPathFromParents(String dstLabel, Map<String, String> parent) {
-        List<String> pathNodes = new ArrayList<>();
-        String current = dstLabel;
-        while (current != null) {
-            pathNodes.add(current);
-            current = parent.get(current);
-        }
-
-        Collections.reverse(pathNodes);
-        return new Path(pathNodes);
-    }
-
-    private boolean canSearch(String srcLabel, String dstLabel) {
-        if (!g().containsVertex(srcLabel) || !g().containsVertex(dstLabel)) {
-            return false;
-        }
-        return true;
+        return bfsSearcher.search(srcLabel, dstLabel);
     }
 
     private Path dfsSearch(String srcLabel, String dstLabel) {
-        if (!canSearch(srcLabel, dstLabel)) return null;
-
-        if (srcLabel.equals(dstLabel)) {
-            return new Path(Collections.singletonList(srcLabel));
-        }
-
-        Deque<String> stack = new ArrayDeque<>();
-        Set<String> visited = new HashSet<>();
-        Map<String, String> parent = new HashMap<>();
-
-        visited.add(srcLabel);
-        stack.push(srcLabel);
-
-        boolean found = false;
-
-        while (!stack.isEmpty()) {
-            String current = stack.pop();
-
-            if (current.equals(dstLabel)) {
-                found = true;
-                break;
-            }
-
-            for (DefaultEdge edge : g().outgoingEdgesOf(current)) {
-                String neighbor = g().getEdgeTarget(edge);
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    parent.put(neighbor, current);
-                    stack.push(neighbor);
-                }
-            }
-        }
-
-        if (!found) {
-            return null;
-        }
-
-        return buildPathFromParents(dstLabel, parent);
+        return dfsSearcher.search(srcLabel, dstLabel);
     }
+
 
     public void outputDOTGraph(String dotOutPath) {
         io.outputDOTGraph(dotOutPath);
