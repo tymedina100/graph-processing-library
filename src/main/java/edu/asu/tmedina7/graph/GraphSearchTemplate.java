@@ -5,15 +5,16 @@ import org.jgrapht.graph.DefaultEdge;
 
 import java.util.*;
 
-abstract class GraphSearchTemplate {
+abstract class GraphSearchTemplate implements GraphSearchStrategy {
     private final Graph<String, DefaultEdge> graph;
 
     GraphSearchTemplate(Graph<String, DefaultEdge> graph) {
         this.graph = graph;
     }
 
+
     // Template method
-    final Path search(String srcLabel, String dstLabel) {
+    public final Path search(String srcLabel, String dstLabel) {
         if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) {
             return null;
         }

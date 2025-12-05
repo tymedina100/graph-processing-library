@@ -107,15 +107,13 @@ public class GraphService {
      */
     public Path GraphSearch(String srcLabel, String dstLabel, edu.asu.tmedina7.graph.Algorithm algo) {
         Objects.requireNonNull(algo, "algo");
-        switch (algo) {
-            case BFS:
-                return bfsSearch(srcLabel, dstLabel);
-            case DFS:
-                return dfsSearch(srcLabel, dstLabel);
-            default:
-                throw new IllegalArgumentException("Unsupported algorithm: " + algo);
+        GraphSearchStrategy strategy = searchStrategies.get(algo);
+        if (strategy == null) {
+            throw new IllegalArgumentException("Unsupported algorithm: " + algo);
         }
+        return strategy.search(srcLabel, dstLabel);
     }
+
 
     // --- internal helpers for BFS and DFS (Template Method pattern) ---
 
@@ -129,6 +127,12 @@ public class GraphService {
     private Path dfsSearch(String srcLabel, String dstLabel) {
         return dfsSearcher.search(srcLabel, dstLabel);
     }
+
+    private final Map<edu.asu.tmedina7.graph.Algorithm, GraphSearchStrategy> searchStrategies =
+            Map.of(
+                    edu.asu.tmedina7.graph.Algorithm.BFS, bfsSearcher,
+                    edu.asu.tmedina7.graph.Algorithm.DFS, dfsSearcher
+            );
 
 
     public void outputDOTGraph(String dotOutPath) {
