@@ -3,37 +3,33 @@ package edu.asu.tmedina7.graph;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.nio.dot.DOTImporter;
 
-import java.io.Reader;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import org.jgrapht.nio.dot.DOTExporter;
-import java.io.Writer;
-import java.util.concurrent.TimeUnit;
-
 public class GraphService {
-    private final Graph<String, DefaultEdge> g = new DefaultDirectedGraph<>(DefaultEdge.class);
+    private static final String FAILED_TO_WRITE_GRAPH_TEXT = "Failed to write graph text: ";
+    private static final String EDGE_ARROW = " -> ";
+    private final Graph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
 
-    public void parseGraph(String filepath) {
-        DOTImporter<String, DefaultEdge> importer = new DOTImporter<>();
-        importer.setVertexFactory(label -> label); // use label as vertex id
-        try (Reader r = Files.newBufferedReader(java.nio.file.Path.of(filepath))) {
-            importer.importGraph(g, r);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse DOT: " + e.getMessage(), e);
-        }
+    private Graph<String, DefaultEdge> g() {
+        return graph;
+    }
+
+    private final GraphIO io = new GraphIO(g());
+
+    public void parseGraph(String dotFilePath) {
+        io.parseGraph(dotFilePath);
     }
 
     @Override
     public String toString() {
-        List<String> nodes = new ArrayList<>(g.vertexSet());
+        List<String> nodes = new ArrayList<>(g().vertexSet());
         Collections.sort(nodes);
 
-        List<String> edges = g.edgeSet().stream()
-                .map(e -> g.getEdgeSource(e) + " -> " + g.getEdgeTarget(e))
+        List<String> edges = g().edgeSet().stream()
+                .map(edge -> g().getEdgeSource(edge) + EDGE_ARROW + g().getEdgeTarget(edge))
                 .sorted() // lexicographic: src then dst
                 .collect(Collectors.toList());
 
@@ -44,19 +40,19 @@ public class GraphService {
                 String.join(nl, edges) + nl;
     }
 
-    public void outputGraph(String filepath) {
+    public void outputGraph(String outFilePath) {
         try {
-            Files.writeString(java.nio.file.Path.of(filepath), this.toString());
+            Files.writeString(java.nio.file.Path.of(outFilePath), this.toString());
         } catch (Exception e) {
-            throw new RuntimeException("Failed to write graph text: " + e.getMessage(), e);
+            throw new RuntimeException(FAILED_TO_WRITE_GRAPH_TEXT + e.getMessage(), e);
         }
     }
 
     public boolean addNode(String label) {
         Objects.requireNonNull(label, "label");
         if (label.isEmpty()) return false;
-        if (g.containsVertex(label)) return false;
-        return g.addVertex(label);
+        if (g().containsVertex(label)) return false;
+        return g().addVertex(label);
     }
 
     public int addNodes(String[] labels) {
@@ -66,13 +62,13 @@ public class GraphService {
         return added;
     }
 
-    public boolean addEdge(String src, String dst) {
-        Objects.requireNonNull(src); Objects.requireNonNull(dst);
-        if (src.isEmpty() || dst.isEmpty()) return false;
-        if (!g.containsVertex(src)) g.addVertex(src);
-        if (!g.containsVertex(dst)) g.addVertex(dst);
-        if (g.containsEdge(src, dst)) return false;
-        return g.addEdge(src, dst) != null;
+    public boolean addEdge(String srclabel, String dstLabel) {
+        Objects.requireNonNull(srclabel); Objects.requireNonNull(dstLabel);
+        if (srclabel.isEmpty() || dstLabel.isEmpty()) return false;
+        if (!g().containsVertex(srclabel)) g().addVertex(srclabel);
+        if (!g().containsVertex(dstLabel)) g().addVertex(dstLabel);
+        if (g().containsEdge(srclabel, dstLabel)) return false;
+        return g().addEdge(srclabel, dstLabel) != null;
     }
 
     // === Removals (Part 2) ===
@@ -81,7 +77,7 @@ public class GraphService {
     public boolean removeNode(String label) {
         Objects.requireNonNull(label, "label");
         if (label.isEmpty()) return false;
-        return g.removeVertex(label);
+        return g().removeVertex(label);
     }
 
     /** Remove multiple nodes; returns how many were actually removed. */
@@ -89,19 +85,19 @@ public class GraphService {
         if (labels == null) return 0;
         int removed = 0;
         for (String l : labels) {
-            if (l != null && !l.isEmpty() && g.removeVertex(l)) removed++;
+            if (l != null && !l.isEmpty() && g().removeVertex(l)) removed++;
         }
         return removed;
     }
 
     /** Remove exactly one edge src->dst. Returns true if the edge existed and was removed. */
-    public boolean removeEdge(String src, String dst) {
-        Objects.requireNonNull(src, "src");
-        Objects.requireNonNull(dst, "dst");
-        if (src.isEmpty() || dst.isEmpty()) return false;
-        if (!g.containsVertex(src) || !g.containsVertex(dst)) return false;
-        if (!g.containsEdge(src, dst)) return false;
-        g.removeEdge(src, dst);
+    public boolean removeEdge(String srcLabel, String dstLabel) {
+        Objects.requireNonNull(srcLabel, "src");
+        Objects.requireNonNull(dstLabel, "dst");
+        if (srcLabel.isEmpty() || dstLabel.isEmpty()) return false;
+        if (!g().containsVertex(srcLabel) || !g().containsVertex(dstLabel)) return false;
+        if (!g().containsEdge(srcLabel, dstLabel)) return false;
+        g().removeEdge(srcLabel, dstLabel);
         return true;
     }
 
@@ -111,129 +107,38 @@ public class GraphService {
      */
     public Path GraphSearch(String srcLabel, String dstLabel, edu.asu.tmedina7.graph.Algorithm algo) {
         Objects.requireNonNull(algo, "algo");
-        switch (algo) {
-            case BFS:
-                return bfsSearch(srcLabel, dstLabel);
-            case DFS:
-                return dfsSearch(srcLabel, dstLabel);
-            default:
-                throw new IllegalArgumentException("Unsupported algorithm: " + algo);
+        GraphSearchStrategy strategy = searchStrategies.get(algo);
+        if (strategy == null) {
+            throw new IllegalArgumentException("Unsupported algorithm: " + algo);
         }
+        return strategy.search(srcLabel, dstLabel);
     }
 
-    // --- internal helpers for BFS and DFS ---
+
+    // --- internal helpers for BFS and DFS (Template Method pattern) ---
+
+    private final GraphSearchTemplate bfsSearcher = new BfsSearch(g());
+    private final GraphSearchTemplate dfsSearcher = new DfsSearch(g());
+    private final GraphSearchTemplate randomWalker = new RandomWalkSearch(g());
 
     private Path bfsSearch(String srcLabel, String dstLabel) {
-        // If either node is missing from the graph, no path can exist.
-        if (!g.containsVertex(srcLabel) || !g.containsVertex(dstLabel)) {
-            return null;
-        }
-
-        // Special case: src == dst
-        if (srcLabel.equals(dstLabel)) {
-            return new Path(Collections.singletonList(srcLabel));
-        }
-
-        Queue<String> queue = new ArrayDeque<>();
-        Set<String> visited = new HashSet<>();
-        Map<String, String> parent = new HashMap<>(); // child -> parent
-
-        visited.add(srcLabel);
-        queue.add(srcLabel);
-
-        boolean found = false;
-
-        while (!queue.isEmpty()) {
-            String current = queue.remove();
-
-            if (current.equals(dstLabel)) {
-                found = true;
-                break;
-            }
-
-            for (DefaultEdge edge : g.outgoingEdgesOf(current)) {
-                String neighbor = g.getEdgeTarget(edge);
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    parent.put(neighbor, current);
-                    queue.add(neighbor);
-                }
-            }
-        }
-
-        if (!found) {
-            return null;
-        }
-
-        List<String> pathNodes = new ArrayList<>();
-        String current = dstLabel;
-        while (current != null) {
-            pathNodes.add(current);
-            current = parent.get(current);
-        }
-
-        Collections.reverse(pathNodes);
-        return new Path(pathNodes);
+        return bfsSearcher.search(srcLabel, dstLabel);
     }
 
     private Path dfsSearch(String srcLabel, String dstLabel) {
-        if (!g.containsVertex(srcLabel) || !g.containsVertex(dstLabel)) {
-            return null;
-        }
-
-        if (srcLabel.equals(dstLabel)) {
-            return new Path(Collections.singletonList(srcLabel));
-        }
-
-        Deque<String> stack = new ArrayDeque<>();
-        Set<String> visited = new HashSet<>();
-        Map<String, String> parent = new HashMap<>();
-
-        visited.add(srcLabel);
-        stack.push(srcLabel);
-
-        boolean found = false;
-
-        while (!stack.isEmpty()) {
-            String current = stack.pop();
-
-            if (current.equals(dstLabel)) {
-                found = true;
-                break;
-            }
-
-            for (DefaultEdge edge : g.outgoingEdgesOf(current)) {
-                String neighbor = g.getEdgeTarget(edge);
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    parent.put(neighbor, current);
-                    stack.push(neighbor);
-                }
-            }
-        }
-
-        if (!found) {
-            return null;
-        }
-
-        List<String> pathNodes = new ArrayList<>();
-        String current = dstLabel;
-        while (current != null) {
-            pathNodes.add(current);
-            current = parent.get(current);
-        }
-
-        Collections.reverse(pathNodes);
-        return new Path(pathNodes);
+        return dfsSearcher.search(srcLabel, dstLabel);
     }
 
-    public void outputDOTGraph(String path) {
-        DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
-        try (Writer w = Files.newBufferedWriter(java.nio.file.Path.of(path))) {
-            exporter.exportGraph(g, w);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to write DOT: " + e.getMessage(), e);
-        }
+    private final Map<edu.asu.tmedina7.graph.Algorithm, GraphSearchStrategy> searchStrategies =
+            Map.of(
+                    edu.asu.tmedina7.graph.Algorithm.BFS, bfsSearcher,
+                    edu.asu.tmedina7.graph.Algorithm.DFS, dfsSearcher,
+                    Algorithm.RANDOM_WALK, randomWalker
+            );
+
+
+    public void outputDOTGraph(String dotOutPath) {
+        io.outputDOTGraph(dotOutPath);
     }
 
     /**
@@ -242,33 +147,6 @@ public class GraphService {
      * @param format  e.g., "png", "svg", "jpg"
      */
     public void outputGraphics(String outPath, String format) {
-        Objects.requireNonNull(outPath, "outPath");
-        Objects.requireNonNull(format, "format");
-        if (format.isBlank()) throw new IllegalArgumentException("format must not be blank");
-
-        try {
-            // 1) write a temp DOT file
-            java.nio.file.Path dotPath = Files.createTempFile("graph_", ".dot");
-            outputDOTGraph(dotPath.toString());
-
-            // 2) dot -T{format} dotPath -o outPath
-            Process p = new ProcessBuilder("dot", "-T" + format, dotPath.toString(), "-o", outPath)
-                    .redirectErrorStream(true)
-                    .start();
-
-            // 3) wait with a timeout and capture output if it fails
-            boolean ok = p.waitFor(20, TimeUnit.SECONDS);
-            if (!ok) {
-                p.destroyForcibly();
-                throw new RuntimeException("dot timed out");
-            }
-            int code = p.exitValue();
-            if (code != 0) {
-                String err = new String(p.getInputStream().readAllBytes()); // merged stdout/stderr
-                throw new RuntimeException("dot exit " + code + ": " + err);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to render graphics: " + e.getMessage(), e);
-        }
+        io.outputGraphics(outPath, format);
     }
 }
