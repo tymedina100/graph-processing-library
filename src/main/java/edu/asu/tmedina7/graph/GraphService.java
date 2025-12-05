@@ -121,7 +121,7 @@ public class GraphService {
 
     private Path bfsSearch(String srcLabel, String dstLabel) {
         // If either node is missing from the graph, no path can exist.
-        if (canSearch(srcLabel, dstLabel)) return null;
+        if (!canSearch(srcLabel, dstLabel)) return null;
 
         // Special case: src == dst
         if (srcLabel.equals(dstLabel)) {
@@ -176,13 +176,13 @@ public class GraphService {
 
     private boolean canSearch(String srcLabel, String dstLabel) {
         if (!g().containsVertex(srcLabel) || !g().containsVertex(dstLabel)) {
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
     private Path dfsSearch(String srcLabel, String dstLabel) {
-        if (canSearch(srcLabel, dstLabel)) return null;
+        if (!canSearch(srcLabel, dstLabel)) return null;
 
         if (srcLabel.equals(dstLabel)) {
             return new Path(Collections.singletonList(srcLabel));
