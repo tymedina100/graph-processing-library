@@ -28,12 +28,17 @@ public class GraphService {
     private static final String ERR_FORMAT_BLANK = "format must not be blank";
     private static final String DOT_EXIT_PREFIX = "dot exit ";
     private final Graph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
+    
+    private Graph<String, DefaultEdge> g() {
+        return graph;
+    }
+
 
     public void parseGraph(String dotFilePath) {
         DOTImporter<String, DefaultEdge> importer = new DOTImporter<>();
         importer.setVertexFactory(label -> label); // use label as vertex id
         try (Reader reader = Files.newBufferedReader(java.nio.file.Path.of(dotFilePath))) {
-            importer.importGraph(graph, reader);
+            importer.importGraph(g(), reader);
         } catch (Exception e) {
             throw new RuntimeException(FAILED_TO_PARSE_DOT + e.getMessage(), e);
         }
@@ -41,11 +46,11 @@ public class GraphService {
 
     @Override
     public String toString() {
-        List<String> nodes = new ArrayList<>(graph.vertexSet());
+        List<String> nodes = new ArrayList<>(g().vertexSet());
         Collections.sort(nodes);
 
-        List<String> edges = graph.edgeSet().stream()
-                .map(edge -> graph.getEdgeSource(edge) + EDGE_ARROW + graph.getEdgeTarget(edge))
+        List<String> edges = g().edgeSet().stream()
+                .map(edge -> g().getEdgeSource(edge) + EDGE_ARROW + g().getEdgeTarget(edge))
                 .sorted() // lexicographic: src then dst
                 .collect(Collectors.toList());
 
@@ -67,8 +72,8 @@ public class GraphService {
     public boolean addNode(String label) {
         Objects.requireNonNull(label, "label");
         if (label.isEmpty()) return false;
-        if (graph.containsVertex(label)) return false;
-        return graph.addVertex(label);
+        if (g().containsVertex(label)) return false;
+        return g().addVertex(label);
     }
 
     public int addNodes(String[] labels) {
@@ -81,10 +86,10 @@ public class GraphService {
     public boolean addEdge(String srclabel, String dstLabel) {
         Objects.requireNonNull(srclabel); Objects.requireNonNull(dstLabel);
         if (srclabel.isEmpty() || dstLabel.isEmpty()) return false;
-        if (!graph.containsVertex(srclabel)) graph.addVertex(srclabel);
-        if (!graph.containsVertex(dstLabel)) graph.addVertex(dstLabel);
-        if (graph.containsEdge(srclabel, dstLabel)) return false;
-        return graph.addEdge(srclabel, dstLabel) != null;
+        if (!g().containsVertex(srclabel)) g().addVertex(srclabel);
+        if (!g().containsVertex(dstLabel)) g().addVertex(dstLabel);
+        if (g().containsEdge(srclabel, dstLabel)) return false;
+        return g().addEdge(srclabel, dstLabel) != null;
     }
 
     // === Removals (Part 2) ===
@@ -93,7 +98,7 @@ public class GraphService {
     public boolean removeNode(String label) {
         Objects.requireNonNull(label, "label");
         if (label.isEmpty()) return false;
-        return graph.removeVertex(label);
+        return g().removeVertex(label);
     }
 
     /** Remove multiple nodes; returns how many were actually removed. */
@@ -101,7 +106,7 @@ public class GraphService {
         if (labels == null) return 0;
         int removed = 0;
         for (String l : labels) {
-            if (l != null && !l.isEmpty() && graph.removeVertex(l)) removed++;
+            if (l != null && !l.isEmpty() && g().removeVertex(l)) removed++;
         }
         return removed;
     }
@@ -111,9 +116,9 @@ public class GraphService {
         Objects.requireNonNull(srcLabel, "src");
         Objects.requireNonNull(dstLabel, "dst");
         if (srcLabel.isEmpty() || dstLabel.isEmpty()) return false;
-        if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) return false;
-        if (!graph.containsEdge(srcLabel, dstLabel)) return false;
-        graph.removeEdge(srcLabel, dstLabel);
+        if (!g().containsVertex(srcLabel) || !g().containsVertex(dstLabel)) return false;
+        if (!g().containsEdge(srcLabel, dstLabel)) return false;
+        g().removeEdge(srcLabel, dstLabel);
         return true;
     }
 
@@ -161,8 +166,8 @@ public class GraphService {
                 break;
             }
 
-            for (DefaultEdge edge : graph.outgoingEdgesOf(current)) {
-                String neighbor = graph.getEdgeTarget(edge);
+            for (DefaultEdge edge : g().outgoingEdgesOf(current)) {
+                String neighbor = g().getEdgeTarget(edge);
                 if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
                     parent.put(neighbor, current);
@@ -191,7 +196,7 @@ public class GraphService {
     }
 
     private boolean canSearch(String srcLabel, String dstLabel) {
-        if (!graph.containsVertex(srcLabel) || !graph.containsVertex(dstLabel)) {
+        if (!g().containsVertex(srcLabel) || !g().containsVertex(dstLabel)) {
             return true;
         }
         return false;
@@ -221,8 +226,8 @@ public class GraphService {
                 break;
             }
 
-            for (DefaultEdge edge : graph.outgoingEdgesOf(current)) {
-                String neighbor = graph.getEdgeTarget(edge);
+            for (DefaultEdge edge : g().outgoingEdgesOf(current)) {
+                String neighbor = g().getEdgeTarget(edge);
                 if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
                     parent.put(neighbor, current);
@@ -241,7 +246,7 @@ public class GraphService {
     public void outputDOTGraph(String dotOutPath) {
         DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
         try (Writer w = Files.newBufferedWriter(java.nio.file.Path.of(dotOutPath))) {
-            exporter.exportGraph(graph, w);
+            exporter.exportGraph(g(), w);
         } catch (Exception e) {
             throw new RuntimeException(FAILED_TO_WRITE_DOT + e.getMessage(), e);
         }
