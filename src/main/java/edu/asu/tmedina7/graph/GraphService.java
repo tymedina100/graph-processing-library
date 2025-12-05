@@ -3,45 +3,24 @@ package edu.asu.tmedina7.graph;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.nio.dot.DOTImporter;
 
-import java.io.Reader;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import org.jgrapht.nio.dot.DOTExporter;
-import java.io.Writer;
-import java.util.concurrent.TimeUnit;
-
 public class GraphService {
     private static final String FAILED_TO_WRITE_GRAPH_TEXT = "Failed to write graph text: ";
     private static final String EDGE_ARROW = " -> ";
-    private static final String FAILED_TO_PARSE_DOT = "Failed to parse DOT: ";
-    private static final String FAILED_TO_WRITE_DOT = "Failed to write DOT: ";
-    private static final String FAILED_TO_RENDER_GRAPHICS = "Failed to render graphics: ";
-    private static final String DOT_TIMED_OUT = "dot timed out";
-    private static final int DOT_TIMEOUT_SECONDS = 20;
-    private static final String DOT_CMD = "dot";
-    private static final String DOT_PREFIX = "graph_";
-    private static final String DOT_SUFFIX = ".dot";
-    private static final String ERR_FORMAT_BLANK = "format must not be blank";
-    private static final String DOT_EXIT_PREFIX = "dot exit ";
     private final Graph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
-    
+
     private Graph<String, DefaultEdge> g() {
         return graph;
     }
 
+    private final GraphIO io = new GraphIO(g());
 
     public void parseGraph(String dotFilePath) {
-        DOTImporter<String, DefaultEdge> importer = new DOTImporter<>();
-        importer.setVertexFactory(label -> label); // use label as vertex id
-        try (Reader reader = Files.newBufferedReader(java.nio.file.Path.of(dotFilePath))) {
-            importer.importGraph(g(), reader);
-        } catch (Exception e) {
-            throw new RuntimeException(FAILED_TO_PARSE_DOT + e.getMessage(), e);
-        }
+        io.parseGraph(dotFilePath);
     }
 
     @Override
@@ -244,12 +223,7 @@ public class GraphService {
     }
 
     public void outputDOTGraph(String dotOutPath) {
-        DOTExporter<String, DefaultEdge> exporter = new DOTExporter<>();
-        try (Writer w = Files.newBufferedWriter(java.nio.file.Path.of(dotOutPath))) {
-            exporter.exportGraph(g(), w);
-        } catch (Exception e) {
-            throw new RuntimeException(FAILED_TO_WRITE_DOT + e.getMessage(), e);
-        }
+        io.outputDOTGraph(dotOutPath);
     }
 
     /**
@@ -258,33 +232,6 @@ public class GraphService {
      * @param format  e.g., "png", "svg", "jpg"
      */
     public void outputGraphics(String outPath, String format) {
-        Objects.requireNonNull(outPath, "outPath");
-        Objects.requireNonNull(format, "format");
-        if (format.isBlank()) throw new IllegalArgumentException(ERR_FORMAT_BLANK);
-
-        try {
-            // 1) write a temp DOT file
-            java.nio.file.Path dotPath = Files.createTempFile(DOT_PREFIX, DOT_SUFFIX);
-            outputDOTGraph(dotPath.toString());
-
-            // 2) dot -T{format} dotPath -o outPath
-            Process p = new ProcessBuilder(DOT_CMD, "-T" + format, dotPath.toString(), "-o", outPath)
-                    .redirectErrorStream(true)
-                    .start();
-
-            // 3) wait with a timeout and capture output if it fails
-            boolean finished = p.waitFor(DOT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (!finished) {
-                p.destroyForcibly();
-                throw new RuntimeException(DOT_TIMED_OUT);
-            }
-            int exitCode = p.exitValue();
-            if (exitCode != 0) {
-                String output = new String(p.getInputStream().readAllBytes()); // merged stdout/stderr
-                throw new RuntimeException(DOT_EXIT_PREFIX + exitCode + ": " + output);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(FAILED_TO_RENDER_GRAPHICS + e.getMessage(), e);
-        }
+        io.outputGraphics(outPath, format);
     }
 }
