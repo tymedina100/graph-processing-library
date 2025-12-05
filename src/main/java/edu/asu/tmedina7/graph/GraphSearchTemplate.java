@@ -33,12 +33,14 @@ abstract class GraphSearchTemplate implements GraphSearchStrategy {
         while (!frontier.isEmpty()) {
             String current = popFromFrontier(frontier);
 
+            Path currentPath = buildPathFromParents(current, parent);
+            onVisit(currentPath);
+
             if (current.equals(dstLabel)) {
-                return buildPathFromParents(dstLabel, parent);
+                return currentPath;
             }
 
-            for (DefaultEdge edge : graph.outgoingEdgesOf(current)) {
-                String neighbor = graph.getEdgeTarget(edge);
+            for (String neighbor : neighborsOf(current)) {
                 if (!visited.contains(neighbor)) {
                     visited.add(neighbor);
                     parent.put(neighbor, current);
@@ -46,7 +48,6 @@ abstract class GraphSearchTemplate implements GraphSearchStrategy {
                 }
             }
         }
-
         return null;
     }
 
@@ -64,4 +65,17 @@ abstract class GraphSearchTemplate implements GraphSearchStrategy {
         Collections.reverse(pathNodes);
         return new Path(pathNodes);
     }
+
+    protected List<String> neighborsOf(String current) {
+        List<String> neighbors = new ArrayList<>();
+        for (DefaultEdge edge : graph.outgoingEdgesOf(current)) {
+            neighbors.add(graph.getEdgeTarget(edge));
+        }
+        return neighbors;
+    }
+
+    protected void onVisit(Path path) {
+        // default: no-op
+    }
+
 }

@@ -119,6 +119,7 @@ public class GraphService {
 
     private final GraphSearchTemplate bfsSearcher = new BfsSearch(g());
     private final GraphSearchTemplate dfsSearcher = new DfsSearch(g());
+    private final GraphSearchTemplate randomWalker = new RandomWalkSearch(g());
 
     private Path bfsSearch(String srcLabel, String dstLabel) {
         return bfsSearcher.search(srcLabel, dstLabel);
@@ -131,7 +132,8 @@ public class GraphService {
     private final Map<edu.asu.tmedina7.graph.Algorithm, GraphSearchStrategy> searchStrategies =
             Map.of(
                     edu.asu.tmedina7.graph.Algorithm.BFS, bfsSearcher,
-                    edu.asu.tmedina7.graph.Algorithm.DFS, dfsSearcher
+                    edu.asu.tmedina7.graph.Algorithm.DFS, dfsSearcher,
+                    Algorithm.RANDOM_WALK, randomWalker
             );
 
 
