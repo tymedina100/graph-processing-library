@@ -4,11 +4,14 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class Part3Demo {
+
+    private static final String DEMO_GRAPH = "src/main/resources/samples/demo_input.dot";
+
     public static void main(String[] args) {
         System.out.println("Scheme A (prints full visited path history, then final Path)");
 
         GraphService svc = new GraphService();
-        svc.parseGraph("src/main/resources/samples/demo_input.dot");
+        svc.parseGraph(DEMO_GRAPH);
 
         System.out.println();
         System.out.println("BFS demo: a -> h");
@@ -37,5 +40,12 @@ public class Part3Demo {
 
             if (rw != null) distinctSuccesses.add(formatted);
         }
+
+        System.out.println();
+        System.out.println("Canvas graph demo: a -> c");
+        GraphService canvasSvc = new GraphService();
+        canvasSvc.parseGraph(DEMO_GRAPH);
+        Path aToC = canvasSvc.GraphSearch("a", "c", Algorithm.BFS);
+        System.out.println(PathFormat.schemeA(aToC));
     }
 }
