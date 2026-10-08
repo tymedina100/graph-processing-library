@@ -1,50 +1,46 @@
-# CSE464 — Project Parts 1 & 2
+# Graph Processing and Search Library
 
-## Prereqs
+A Java 17 graph library developed for ASU CSE464. The project covers Parts 1–3: DOT parsing and export, graph editing, and reusable search algorithms using Strategy and Template Method patterns. This repository retains the original coursework history and collaborator contributions.
 
-Java 17 • Maven 3.9+ • Graphviz on PATH (`dot -V`).
+## Capabilities
 
-## Build
+- Parse directed DOT graphs with JGraphT and produce stable text summaries.
+- Add and remove nodes/edges, deduplicate additions, and create missing vertices.
+- Export DOT and render PNG through Graphviz.
+- Search with breadth-first search, depth-first search, or randomized DFS-style traversal (`RANDOM_WALK`).
+- Reuse `GraphSearchStrategy` and `GraphSearchTemplate` with algorithm-specific frontier and neighbor ordering.
+- Format search paths and show visited-path history in the Part 3 demo.
 
-```bash
-mvn clean package
-```
+## Build and test
 
-## Run
-
-```bash
-mvn -q exec:java "-Dexec.mainClass=edu.asu.tmedina7.graph.Main"
-```
-
-Outputs in `target/`:
-
--   `graph.txt` (text summary)
--   `graph.dot` & `graph.png` (Feature 4)
-
-## Features Implemented
-
-1.  Parse DOT → stable summary → write file
-2.  Add nodes (skip null/empty; de‑dupe)
-3.  Add edges (de‑dupe; auto‑create vertices)
-4.  Export DOT & render PNG via Graphviz
-5.  Remove APIs (nodes and edges)
-6.  Graph Search with BFS and DFS
-7.  Continuous Integration (CI) with GitHub Actions
-
-## Files
-
-`GraphService.java`, `Main.java`, `GraphServiceTest.java`, `Path.java`, `Algorithm.java`,`GraphServiceRemoveTest.java`, `GraphServiceBfsTest`, `GraphServiceDfsTest`, `src/main/resources/samples/input.dot`, `src/test/resources/samples/expected.txt`.
-
-## Test
+Requires Java 17+, Maven 3.9+, and Graphviz (`dot`) for PNG rendering.
 
 ```bash
-mvn clean package
+git clone https://github.com/tymedina100/graph-processing-library.git
+cd graph-processing-library
+mvn clean verify
 ```
 
-Expect **BUILD SUCCESS**.
+GitHub Actions runs Maven validation on Ubuntu and Windows with JDK 17. JUnit tests cover graph parsing/editing, removal, BFS, DFS, and the Part 3 demo.
 
-## Screenshots
+## Run the demos
 
-![Features 1-4](docs/images/features1-4.png)
+```bash
+mvn -q exec:java -Dexec.mainClass=edu.asu.tmedina7.graph.Main
+mvn -q exec:java -Dexec.mainClass=edu.asu.tmedina7.graph.Part3Demo
+```
 
-![Features 5-6](docs/images/features5-6.png)
+Run from the repository root. `Main` writes `target/graph.txt`, `target/graph.dot`, and `target/graph.png`. `Part3Demo` loads `src/main/resources/samples/demo_input.dot`, demonstrates lowercase `a` → `h` searches and `a` → `c`, and attempts at least five randomized traversals. The randomized demo stops after 100 attempts if it has not observed two distinct successful paths; results may vary between runs.
+
+## Source layout
+
+- `GraphService` exposes graph operations and algorithm selection.
+- `GraphIO` handles parsing and export.
+- `BfsSearch`, `DfsSearch`, and `RandomWalkSearch` implement search strategies.
+- `Path` and `PathFormat` represent and display results.
+- `src/test/` contains JUnit tests and expected-output fixtures.
+
+The original [Parts 1–2 write-up](README.pdf) and [Part 3 write-up](Project%20Part%203%20%E2%80%94%20README.pdf) remain available.
+
+![Graph parsing and export](docs/images/features1-4.png)
+![Graph removal and search](docs/images/features5-6.png)

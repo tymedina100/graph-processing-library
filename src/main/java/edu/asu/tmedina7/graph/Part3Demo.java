@@ -5,6 +5,7 @@ import java.util.Set;
 
 public class Part3Demo {
 
+    private static final int MAX_RANDOM_ATTEMPTS = 100;
     private static final String DEMO_GRAPH = "src/main/resources/samples/demo_input.dot";
 
     public static void main(String[] args) {
@@ -29,7 +30,7 @@ public class Part3Demo {
         Set<String> distinctSuccesses = new LinkedHashSet<>();
         int attempt = 0;
 
-        while (attempt < 5 || distinctSuccesses.size() < 2) {
+        while (attempt < MAX_RANDOM_ATTEMPTS && (attempt < 5 || distinctSuccesses.size() < 2)) {
             attempt++;
             System.out.println();
             System.out.println("random testing #" + attempt);
@@ -42,6 +43,10 @@ public class Part3Demo {
         }
 
         System.out.println();
+        if (distinctSuccesses.size() < 2) {
+            System.out.println("Random walk reached the attempt limit; fewer than two distinct paths found.");
+        }
+
         System.out.println("Canvas graph demo: a -> c");
         GraphService canvasSvc = new GraphService();
         canvasSvc.parseGraph(DEMO_GRAPH);
